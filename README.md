@@ -1,6 +1,13 @@
-# 🚀 Born2beroot
+<p align="center">
+  <img src="https://github.com/maaloum-yassine/42/blob/main/logo_project42/born2beroote.png" alt="Cub3D 42 project badge"/>
+</p>
 
+## 🎥 Score 🥇✅
+<p align="center">
+  <img src="https://github.com/maaloum-yassine/42/blob/main/score/Born2beroot_.png" alt="Score 42 project 125"/>
+</p>
 
+---
 
 ## 📑 Overview
 
@@ -240,7 +247,3 @@ userlist_deny=NO
 - [MariaDB Documentation](https://mariadb.com/kb/en/documentation/)
 
 ---
-
-⭐ Star this repository if you found it helpful!
-
-Created with ❤️ by [Your Name]
