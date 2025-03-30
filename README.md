@@ -356,8 +356,3 @@ userlist_deny=NO
 - [Bash Scripting Guide](https://tldp.org/LDP/abs/html/)
 
 ---
-
-⭐ Star this repository if you found it helpful!
-
-Created with ❤️ by [Your Name]
----
