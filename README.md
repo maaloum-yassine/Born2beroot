@@ -11,14 +11,13 @@
 
 ## 📑 Overview
 
-This projet contains step-by-step instructions for configuring a secure Debian virtual machine with:
-Strong password policies
-SSH configuration
-Firewall rules
-User and group management
-Periodic monitoring with cron
-Optional bonus implementations (WordPress with LLMP  stack ( LLMP = Linux + Lighttpd + MySQL/MariaDB + PHP) and FTP server)
-
+This project contains step-by-step instructions for configuring a secure Debian virtual machine with:
+- Strong password policies
+- SSH configuration
+- Firewall rules
+- User and group management
+- Periodic monitoring with cron
+- Optional bonus implementations (WordPress with LLMP stack and FTP server)
 
 ## 📋 Table of Contents
 
@@ -26,6 +25,7 @@ Optional bonus implementations (WordPress with LLMP  stack ( LLMP = Linux + Ligh
 - [Sudo Configuration](#-sudo-configuration)
 - [SSH Setup](#-ssh-setup)
 - [User Management](#-user-management)
+- [Monitoring Script](#-monitoring-script)
 - [Cron Jobs](#-cron-jobs)
 - [Bonus Features](#-bonus-features)
   - [LLMP Stack](#llmp-stack)
@@ -144,9 +144,110 @@ $ sudo adduser <new_username> user42
 $ getent group user42    # Verify user was added
 ```
 
+## 📊 Monitoring Script
+
+The monitoring script broadcasts system information to all terminal users every 10 minutes via the `wall` command. It provides essential system metrics and usage statistics.
+
+### Script Content (monitoring.sh)
+```bash
+#!/bin/bash
+
+# System architecture and kernel version
+arc=$(uname -a)
+
+# Number of physical processors
+pcpu=$(grep "physical id" /proc/cpuinfo | sort | uniq | wc -l)
+
+# Number of virtual processors
+vcpu=$(grep "^processor" /proc/cpuinfo | wc -l)
+
+# RAM usage statistics
+fram=$(free -m | awk '$1 == "Mem:" {print $2}')
+uram=$(free -m | awk '$1 == "Mem:" {print $3}')
+pram=$(free | awk '$1 == "Mem:" {printf("%.2f"), $3/$2*100}')
+
+# Disk usage statistics
+fdisk=$(df -Bg | grep '^/dev/' | grep -v '/boot$' | awk '{ft += $2} END {print ft}')
+udisk=$(df -Bm | grep '^/dev/' | grep -v '/boot$' | awk '{ut += $3} END {print ut}')
+pdisk=$(df -Bm | grep '^/dev/' | grep -v '/boot$' | awk '{ut += $3} {ft+= $2} END {printf("%d"), ut/ft*100}')
+
+# CPU load percentage
+cpul=$(top -bn1 | grep '^%Cpu' | cut -c 9- | xargs | awk '{printf("%.1f%%"), $1 + $3}')
+
+# Last system reboot
+lb=$(who -b | awk '$1 == "system" {print $3 " " $4}')
+
+# Check if LVM is active
+lvmt=$(lsblk | grep "lvm" | wc -l)
+lvmu=$(if [ $lvmt -eq 0 ]; then echo no; else echo yes; fi)
+
+# Active TCP connections
+# Note: Requires net-tools package (sudo apt install net-tools)
+ctcp=$(cat /proc/net/sockstat{,6} | awk '$1 == "TCP:" {print $3}')
+
+# Number of users logged in
+ulog=$(users | wc -w)
+
+# Network information (IP and MAC addresses)
+ip=$(hostname -I)
+mac=$(ip link show | awk '$1 == "link/ether" {print $2}')
+
+# Number of sudo commands executed
+cmds=$(journalctl _COMM=sudo | grep COMMAND | wc -l)
+
+# Display all information using wall command
+wall "	#Architecture: $arc
+	#CPU physical: $pcpu
+	#vCPU: $vcpu
+	#Memory Usage: $uram/${fram}MB ($pram%)
+	#Disk Usage: $udisk/${fdisk}Gb ($pdisk%)
+	#CPU load: $cpul
+	#Last boot: $lb
+	#LVM use: $lvmu
+	#Connexions TCP: $ctcp ESTABLISHED
+	#User log: $ulog
+	#Network: IP $ip ($mac)
+	#Sudo: $cmds cmd"
+```
+
+### Script Functionality
+
+The monitoring script collects and displays the following information:
+
+1. **Architecture and Kernel Version**: Shows the system's architecture and kernel information
+2. **CPU Information**: Displays both physical and virtual CPU counts
+3. **Memory Usage**: Shows current RAM usage in MB and percentage
+4. **Disk Usage**: Displays storage usage in GB and percentage
+5. **Current CPU Load**: Shows the current processor load percentage
+6. **Last Reboot**: Indicates when the system was last restarted
+7. **LVM Status**: Shows whether Logical Volume Manager is in use
+8. **Active TCP Connections**: Displays the count of established TCP connections
+9. **User Sessions**: Shows how many users are currently logged in
+10. **Network Information**: Displays the server's IP and MAC addresses
+11. **Sudo Command Count**: Shows how many sudo commands have been executed
+
+### Setting Up the Script
+
+1. Create the script file:
+```bash
+$ sudo vi /path/to/monitoring.sh
+```
+
+2. Paste the script content
+
+3. Make the script executable:
+```bash
+$ sudo chmod +x /path/to/monitoring.sh
+```
+
+4. Install any required dependencies:
+```bash
+$ sudo apt install net-tools
+```
+
 ## ⏱️ Cron Jobs
 
-### Setting Up the Monitoring Script
+### Setting Up the Monitoring Script to Run Periodically
 ```bash
 $ sudo crontab -u root -e
 ```
@@ -154,6 +255,11 @@ $ sudo crontab -u root -e
 Add this line to run every 10 minutes:
 ```
 */10 * * * * sh /path/to/monitoring.sh
+```
+
+Check the scheduled jobs:
+```bash
+$ sudo crontab -u root -l
 ```
 
 ## ✨ Bonus Features
@@ -228,7 +334,8 @@ userlist_deny=NO
 - [ ] sudo configuration as required
 - [ ] hostname set correctly
 - [ ] user42 group created with appropriate users
-- [ ] Script monitoring cron job running
+- [ ] Monitoring script displaying all required information
+- [ ] Script monitoring cron job running every 10 minutes
 - [ ] Bonus: Web server with functional WordPress
 - [ ] Bonus: FTP service properly configured
 
@@ -238,6 +345,7 @@ userlist_deny=NO
 - **sudo permissions not working**: Verify user is in sudo group with `getent group sudo`
 - **Password policy not applying**: Make sure PAM modules are properly configured
 - **Web server not accessible**: Check if port 80 is allowed in UFW and Lighttpd is running
+- **Monitoring script not displaying**: Ensure the script has execute permissions and all dependencies are installed
 
 ## 📚 Resources
 
@@ -245,5 +353,11 @@ userlist_deny=NO
 - [UFW Manual](https://manpages.debian.org/buster/ufw/ufw.8.en.html)
 - [WordPress Installation Guide](https://wordpress.org/support/article/how-to-install-wordpress/)
 - [MariaDB Documentation](https://mariadb.com/kb/en/documentation/)
+- [Bash Scripting Guide](https://tldp.org/LDP/abs/html/)
 
+---
+
+⭐ Star this repository if you found it helpful!
+
+Created with ❤️ by [Your Name]
 ---
